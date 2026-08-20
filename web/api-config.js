@@ -15,4 +15,4 @@ export const API = (() => {
 
 // where "watch live" should send people — the stream HUD. Same-origin until the
 // backend is deployed (or a live.* domain is pointed at it).
-export const STREAM_URL = "https://groktimus-production.up.railway.app/stream/hud/scene.html";
+export const STREAM_URL = "https://live.groktimus.fun";
