@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280, initial-scale=1" />
+<title>groktimus — live</title>
+<style>
+  /* ------------------------------------------------------------------
+     MISSION BROADCAST HUD — 1280x800, on camera.
+     Space-webcast layout: starfield + planet limb, mission clock at the top,
+     the unit floating centre-frame, COMMS on the left, TELEMETRY on the right,
+     and a full-width telemetry bar with two big readouts + a phase timeline.
+     Nothing here shares the old card layout.
+  ------------------------------------------------------------------ */
+  :root{
+    --void:#04060b; --ink:#eaf2ff; --dim:#7f8ea6; --dim2:#4d5a70;
+    --hair:rgba(150,180,220,.16); --hair2:rgba(150,180,220,.30);
+    --cold:#8fd0ff; --hot:#ff6b4a; --go:#5ce6a0;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Roboto Mono",monospace;
+    --sans:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{width:1280px;height:800px;overflow:hidden;background:var(--void);color:var(--ink);
+    font-family:var(--sans);letter-spacing:.01em}
+
+  /* ---- backdrop: stars, planet limb, vignette ---- */
+  #stars{position:absolute;inset:0;z-index:0;display:block}
+  .limb{position:absolute;left:-22%;right:-22%;bottom:-560px;height:900px;z-index:1;border-radius:50%;
+    background:radial-gradient(60% 52% at 50% 40%, rgba(58,132,214,.55) 0%, rgba(22,58,110,.42) 42%, rgba(6,14,28,0) 72%);
+    box-shadow:0 -1px 0 rgba(180,225,255,.55), 0 -22px 90px rgba(80,170,255,.20)}
+  .vig{position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 42%, transparent 40%, rgba(2,4,8,.72) 100%)}
+
+  /* ---- the unit ---- */
+  #stage{position:absolute;inset:0;z-index:3}
+  #bot{width:1280px;height:800px;display:block}
+  /* reticle brackets that frame the payload */
+  .ret{position:absolute;z-index:4;width:26px;height:26px;border:1px solid var(--hair2)}
+  .r1{left:512px;top:168px;border-right:0;border-bottom:0}
+  .r2{right:512px;top:168px;border-left:0;border-bottom:0}
+  .r3{left:512px;bottom:236px;border-right:0;border-top:0}
+  .r4{right:512px;bottom:236px;border-left:0;border-top:0}
+  .payload{position:absolute;left:0;right:0;top:140px;z-index:4;text-align:center;
+    font-family:var(--mono);font-size:10px;letter-spacing:.42em;color:var(--dim2)}
+
+  /* ---- top bar ---- */
+  .top{position:absolute;top:0;left:0;right:0;height:74px;z-index:6;
+    display:flex;align-items:center;padding:0 26px;border-bottom:1px solid var(--hair)}
+  .brand{display:flex;align-items:center;gap:11px;font-size:17px;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase}
+  .mk{width:20px;height:20px;position:relative}
+  .mk:before{content:"";position:absolute;inset:1px;border:1.5px solid var(--ink);transform:rotate(45deg)}
+  .mk:after{content:"";position:absolute;left:50%;top:12%;width:1.5px;height:76%;margin-left:-.75px;background:var(--ink)}
+  .mission{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--dim2);margin-left:14px;
+    border-left:1px solid var(--hair);padding-left:14px}
+  .clock{position:absolute;left:0;right:0;text-align:center;pointer-events:none}
+  .clock .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.4em;color:var(--dim2)}
+  .clock .t{font-family:var(--mono);font-size:29px;font-weight:500;letter-spacing:.06em;margin-top:1px;
+    font-variant-numeric:tabular-nums}
+  .rightbits{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .live{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.24em;
+    color:var(--hot)}
+  .live .d{width:8px;height:8px;border-radius:50%;background:var(--hot);animation:pulse 1.4s infinite}
+  @keyframes pulse{50%{opacity:.25}}
+  .audio{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;cursor:pointer;background:transparent;
+    color:var(--dim);border:1px solid var(--hair2);padding:7px 12px;text-transform:uppercase}
+  .audio.on{color:var(--void);background:var(--cold);border-color:var(--cold)}
+
+  /* ---- side columns ---- */
+  .col{position:absolute;z-index:6;width:326px;top:104px}
+  .col.left{left:26px}
+  .col.right{right:26px}
+  .ttl{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;color:var(--dim2);
+    padding-bottom:8px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between}
+  .ttl span{color:var(--dim2)}
+
+  /* comms */
+  .msgs{margin-top:12px;height:238px;overflow:hidden;display:flex;flex-direction:column;gap:11px;
+    justify-content:flex-end;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 26px);
+    mask-image:linear-gradient(180deg,transparent 0,#000 26px)}
+  .m{font-size:14px;line-height:1.35}
+  .m .u{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--cold);display:block;
+    margin-bottom:3px;text-transform:uppercase}
+  .m.me .u{color:var(--go)}
+  .m .b{color:#c5d4e8}
+  .cta{margin-top:16px;border:1px solid var(--hair);padding:12px 13px;display:flex;gap:11px;align-items:center;
+    text-decoration:none}
+  .cta .pill{flex:none;width:26px;height:26px;background:#1ec37f;display:flex;align-items:center;justify-content:center}
+  .cta .t1{font-size:12px;color:#dbe6f5;line-height:1.25}
+  .cta .t2{font-family:var(--mono);font-size:10px;color:#7fd8ab;margin-top:3px;overflow-wrap:anywhere;letter-spacing:.06em}
+
+  /* telemetry column */
+  .chartwrap{margin-top:12px;height:206px;position:relative}
+  .chartwrap canvas{width:100%;height:100%;display:block}
+  .rows{margin-top:14px;border-top:1px solid var(--hair)}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;
+    border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:12px}
+  .row .k{color:var(--dim2);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase}
+  .row .v{color:var(--ink);font-variant-numeric:tabular-nums}
+  .row .v.go{color:var(--go)}
+  .row .v.cold{color:var(--cold)}
+
+  /* trace: what it's doing right now, thin and low-key under the comms */
+  .objs{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .ob{display:flex;gap:10px;font-size:12.5px;line-height:1.35;color:#b9c8dd}
+  .ob .n{flex:none;font-family:var(--mono);font-size:10px;color:var(--cold);letter-spacing:.14em;padding-top:2px}
+  .ob.dim{color:var(--dim2);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em}
+  .trace{margin-top:12px;height:150px;overflow:hidden;display:flex;flex-direction:column;gap:5px;
+    justify-content:flex-end;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 22px);
+    mask-image:linear-gradient(180deg,transparent 0,#000 22px)}
+  .tl{display:flex;gap:9px;font-family:var(--mono);font-size:10.5px;line-height:1.4}
+  .tl .k{flex:none;width:52px;color:var(--dim2);letter-spacing:.1em}
+  .tl .v{color:#93a5bd;overflow-wrap:anywhere}
+  .tl.ev-speak .k,.tl.ev-speak .v{color:var(--ink)}
+  .tl.ev-tool .k{color:var(--go)} .tl.ev-error .k{color:var(--hot)}
+  .tl.ev-chat .k{color:var(--cold)} .tl.ev-ask .k{color:var(--cold)}
+  .tl.fresh{animation:fade .45s ease-out}
+  @keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+  /* ---- lower third caption ---- */
+  .cap{position:absolute;left:26px;right:372px;bottom:150px;z-index:7;
+    border-left:2px solid var(--cold);background:linear-gradient(90deg,rgba(6,12,22,.96),rgba(6,12,22,.72));
+    padding:14px 20px;opacity:0;transform:translateY(8px);transition:.26s}
+  .cap.show{opacity:1;transform:none}
+  .cap .who{font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:var(--cold);display:block;margin-bottom:5px}
+  .cap .txt{font-size:21px;line-height:1.34;color:#f2f7ff}
+
+  /* ---- bottom telemetry bar ---- */
+  .bar{position:absolute;left:0;right:0;bottom:0;height:132px;z-index:7;
+    border-top:1px solid var(--hair2);background:linear-gradient(180deg,rgba(4,8,16,.55),rgba(3,6,12,.94));
+    display:grid;grid-template-columns:300px 1fr 300px;align-items:center;padding:0 26px}
+  .big{text-align:center}
+  .big .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;color:var(--dim2)}
+  .big .v{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1.1;margin-top:4px;
+    font-variant-numeric:tabular-nums}
+  .big .u{font-family:var(--mono);font-size:12px;color:var(--dim);margin-left:5px}
+
+  /* phase timeline — the tick lifecycle, SpaceX stage-marker style */
+  .phases{position:relative;padding:0 26px}
+  .track{position:relative;height:1px;background:var(--hair2);margin:0 12px}
+  .fillbar{position:absolute;left:0;top:0;height:1px;background:var(--cold);transition:width .5s ease}
+  .nodes{display:flex;justify-content:space-between;margin-top:-5px}
+  .node{text-align:center;flex:1}
+  .node .dot{width:9px;height:9px;border:1px solid var(--hair2);background:var(--void);margin:0 auto;
+    transform:rotate(45deg);transition:.3s}
+  .node .nm{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dim2);margin-top:9px}
+  .node.on .dot{background:var(--cold);border-color:var(--cold);box-shadow:0 0 12px rgba(143,208,255,.9)}
+  .node.on .nm{color:var(--ink)}
+  .node.done .dot{background:var(--dim2);border-color:var(--dim2)}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="stars" width="1280" height="800"></canvas>
+<div class="limb"></div>
+<div id="stage"><canvas id="bot"></canvas></div>
+<div class="vig"></div>
+
+<span class="ret r1"></span><span class="ret r2"></span>
+<span class="ret r3"></span><span class="ret r4"></span>
+<div class="payload">PAYLOAD · GROKTIMUS UNIT 01</div>
+
+<div class="top">
+  <div class="brand"><span class="mk"></span> groktimus</div>
+  <div class="mission">MISSION 01 · AUTONOMOUS</div>
+  <div class="clock">
+    <div class="lbl">MISSION ELAPSED</div>
+    <div class="t" id="clock">T+ 00:00:00</div>
+  </div>
+  <div class="rightbits">
+    <button class="audio" id="audioBtn">enable voice</button>
+    <div class="live"><span class="d"></span> LIVE</div>
+  </div>
+</div>
+
+<div class="col left">
+  <div class="ttl"><b>COMMS · GROUND LOOP</b><span id="commscount">0</span></div>
+  <div class="msgs" id="chatlist"></div>
+  <a class="cta" id="joinlink" href="https://pump.fun" target="_blank" rel="noopener">
+    <span class="pill">
+      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.2" y="7.8" width="17.6" height="8.4" rx="4.2" fill="#0f1a14" transform="rotate(-45 12 12)"/>
+        <rect x="3.2" y="7.8" width="8.8" height="8.4" rx="4.2" fill="#eafff4" transform="rotate(-45 12 12)"/>
+      </svg>
+    </span>
+    <div>
+      <div class="t1">transmit to the unit — chat on pump.fun</div>
+      <div class="t2" id="joinurl">pump.fun · coin soon</div>
+    </div>
+  </a>
+  <div class="ttl" style="margin-top:18px"><b>FLIGHT RECORDER</b><span id="rectick">REC</span></div>
+  <div class="trace" id="tracebox"></div>
+</div>
+
+<div class="col right">
+  <div class="ttl"><b>TELEMETRY · MARKET</b><span id="feedstate">SIM</span></div>
+  <div class="chartwrap"><canvas id="chart" width="652" height="412"></canvas></div>
+  <div class="rows">
+    <div class="row"><span class="k">tick</span><span class="v" id="r-tick">—</span></div>
+    <div class="row"><span class="k">brain</span><span class="v cold" id="r-brain">—</span></div>
+    <div class="row"><span class="k">coin</span><span class="v go" id="r-coin">pre-launch</span></div>
+    <div class="row"><span class="k">spent 24h</span><span class="v" id="r-spent">—</span></div>
+  </div>
+  <div class="ttl" style="margin-top:18px"><b>OBJECTIVES</b><span id="objcount">0</span></div>
+  <div class="objs" id="objs"><div class="ob dim">no objectives set yet</div></div>
+</div>
+
+<div class="cap" id="cap"><span class="who">GROKTIMUS ▸ VOICE</span><span class="txt" id="captext"></span></div>
+
+<div class="bar">
+  <div class="big"><div class="k">PROPELLANT</div><div class="v"><span id="b-sol">0.000</span><span class="u">SOL</span></div></div>
+  <div class="phases">
+    <div class="track"><div class="fillbar" id="fill" style="width:0%"></div></div>
+    <div class="nodes" id="nodes">
+      <div class="node" data-p="0"><div class="dot"></div><div class="nm">WAKE</div></div>
+      <div class="node" data-p="1"><div class="dot"></div><div class="nm">OBSERVE</div></div>
+      <div class="node" data-p="2"><div class="dot"></div><div class="nm">DECIDE</div></div>
+      <div class="node" data-p="3"><div class="dot"></div><div class="nm">EXECUTE</div></div>
+      <div class="node" data-p="4"><div class="dot"></div><div class="nm">TRANSMIT</div></div>
+      <div class="node" data-p="5"><div class="dot"></div><div class="nm">STANDBY</div></div>
+    </div>
+  </div>
+  <div class="big"><div class="k">MARKET CAP</div><div class="v" id="b-mcap" style="font-size:22px;color:#4d5a70">PRE-LAUNCH</div></div>
+</div>
+
+<script type="module">
+import { mountScene } from "/groktimus-model.js";
+import { mountCoinChart } from "/coin-chart.js";
+
+const $ = s => document.querySelector(s);
+const esc = x => String(x || "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+async function j(u) { try { return await (await fetch(u, { cache: "no-store" })).json(); } catch { return null; } }
+
+// ---------- backdrop: drifting starfield ----------
+(() => {
+  const c = $("#stars"), x = c.getContext("2d");
+  const stars = Array.from({ length: 220 }, () => ({
+    x: Math.random() * 1280, y: Math.random() * 800,
+    r: Math.random() * 1.25 + 0.25, a: Math.random() * 0.6 + 0.25,
+    tw: Math.random() * 0.02 + 0.004, drift: Math.random() * 0.05 + 0.008,
+  }));
+  let t = 0;
+  (function draw() {
+    t += 0.016;
+    x.clearRect(0, 0, 1280, 800);
+    for (const s of stars) {
+      s.x -= s.drift;                                  // slow lateral drift
+      if (s.x < -2) s.x = 1282;
+      const a = s.a * (0.72 + Math.sin(t * s.tw * 60 + s.y) * 0.28);
+      x.globalAlpha = Math.max(0, Math.min(1, a));
+      x.fillStyle = "#dce9ff";
+      x.beginPath(); x.arc(s.x, s.y, s.r, 0, 7); x.fill();
+    }
+    x.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  })();
+})();
+
+// ---------- the unit ----------
+const view = mountScene($("#bot"), { transparent: true, space: true });
+view.bot.group.position.y = 0.62;
+view.bot.group.scale.setScalar(0.72);
+
+// ---------- market chart (dark, feeds the big readouts) ----------
+const fmtUsd = v => v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M"
+  : v >= 1e3 ? "$" + (v / 1e3).toFixed(1) + "K" : "$" + (+v).toFixed(2);
+mountCoinChart($("#chart"), {
+  theme: "dark",
+  getCoin: async () => {
+    const s = await j("/api/state");
+    return s?.coin ? { mint: s.coin.mint, symbol: s.coin.symbol } : null;
+  },
+  onPrice: (px) => {
+    const el = $("#b-mcap");
+    if (px?.mcap) { el.textContent = fmtUsd(px.mcap); el.style.fontSize = "40px"; el.style.color = ""; }
+    $("#feedstate").textContent = "LIVE";
+  },
+});
+
+// ---------- mission clock ----------
+let bootTs = Date.now();
+function tickClock() {
+  const s = Math.max(0, Math.floor((Date.now() - bootTs) / 1000));
+  const p = n => String(n).padStart(2, "0");
+  $("#clock").textContent = `T+ ${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ---------- phase timeline ----------
+// Driven by the event stream: this is the agent's real tick lifecycle, not a loop.
+const PHASE = { think: 0, info: 1, chat: 1, act: 2, tool: 3, speak: 4, tweet: 4, deploy: 4, ask: 4, error: 3 };
+let phaseTimer = null;
+function setPhase(i) {
+  document.querySelectorAll(".node").forEach((n, k) => {
+    n.className = "node" + (k === i ? " on" : k < i ? " done" : "");
+  });
+  $("#fill").style.width = (i / 5 * 100) + "%";
+  clearTimeout(phaseTimer);
+  if (i < 5) phaseTimer = setTimeout(() => setPhase(5), 22000);   // falls back to STANDBY
+}
+setPhase(5);
+
+// ---------- comms panel ----------
+const chatBox = $("#chatlist");
+const seen = new Set();
+let commsCount = 0;
+function addChat(user, body, me) {
+  const key = user + " " + body;
+  if (seen.has(key)) return;
+  seen.add(key); if (seen.size > 500) seen.delete(seen.values().next().value);
+  const el = document.createElement("div");
+  el.className = "m" + (me ? " me" : "");
+  el.innerHTML = `<span class="u">${esc(user)}</span><span class="b">${esc(body)}</span>`;
+  chatBox.appendChild(el);
+  while (chatBox.children.length > 6) chatBox.removeChild(chatBox.firstChild);
+  $("#commscount").textContent = ++commsCount;
+}
+function chatFromEvent(text) {
+  if (text.startsWith("→ chat: ")) { addChat("groktimus", text.slice(8), true); return; }
+  const i = text.indexOf(": ");
+  if (i > 0 && i < 30) addChat(text.slice(0, i), text.slice(i + 2), false);
+}
+
+// ---------- voice: TTS proxy + caption + speaking animation ----------
+// (kept from the working rig: OBS's embedded browser has no speechSynthesis, so
+// audio comes from the same-origin /api/tts mp3 proxy, and every failure path
+// must go through release() or the queue locks up forever)
+let audioOn = false;
+const btn = $("#audioBtn");
+const ttsUrl = t => `/api/tts?text=${encodeURIComponent(t)}`;
+const player = new Audio();
+player.preload = "auto";
+let queue = [];
+let playing = false;
+
+try {
+  if (localStorage.getItem("gb_audio") === "1") {
+    audioOn = true;
+    btn.className = "audio on";
+    btn.textContent = "voice on";
+    player.play().catch(() => {});
+  }
+} catch {}
+
+btn.onclick = () => {
+  audioOn = !audioOn;
+  try { localStorage.setItem("gb_audio", audioOn ? "1" : "0"); } catch {}
+  btn.className = "audio" + (audioOn ? " on" : "");
+  btn.textContent = audioOn ? "voice on" : "enable voice";
+  if (audioOn) { player.play().catch(() => {}); speak("voice loop open. you can hear me now."); }
+  else { queue = []; player.pause(); try { speechSynthesis.cancel(); } catch {} }
+};
+
+let capTimer = null;
+function showCap(text, ms) {
+  $("#captext").textContent = text;
+  $("#cap").classList.add("show");
+  clearTimeout(capTimer);
+  capTimer = setTimeout(() => { $("#cap").classList.remove("show"); view.setSpeaking(false); }, ms);
+}
+function pickVoice() {
+  try { return speechSynthesis.getVoices().find(v => /en/i.test(v.lang)) || null; } catch { return null; }
+}
+function fallbackSpeak(text) {
+  if (!("speechSynthesis" in window)) { release(); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = pickVoice(); if (v) u.voice = v;
+    u.rate = 1.04; u.pitch = 0.95;
+    u.onstart = () => view.setSpeaking(true);
+    u.onend = release;
+    u.onerror = release;
+    speechSynthesis.speak(u);
+  } catch { release(); }
+}
+
+let watchdog = null;
+function release() {
+  clearTimeout(watchdog); watchdog = null;
+  playing = false;
+  view.setSpeaking(false);
+  next();
+}
+
+function next() {
+  if (playing || !queue.length) return;
+  const text = queue.shift();
+  playing = true;
+  view.setSpeaking(true);
+
+  let settled = false;
+  const finish = () => { if (settled) return; settled = true; release(); };
+  const retryOrFallback = () => {
+    if (settled) return;
+    if (!next._retried) {
+      next._retried = true; settled = true;
+      clearTimeout(watchdog); playing = false;
+      queue.unshift(text); setTimeout(next, 1200);
+      return;
+    }
+    next._retried = false;
+    settled = true; clearTimeout(watchdog); playing = false; view.setSpeaking(false);
+    fallbackSpeak(text);
+  };
+
+  player.onended = () => { next._retried = false; finish(); };
+  player.onerror = retryOrFallback;
+  player.src = ttsUrl(text);
+  player.play().then(() => { next._retried = false; }).catch(retryOrFallback);
+
+  clearTimeout(watchdog);
+  watchdog = setTimeout(() => { if (!settled) { settled = true; release(); } },
+    Math.min(30000, 8000 + text.length * 90));
+}
+function speak(text) {
+  const est = Math.min(9000, Math.max(2400, text.length * 60));
+  showCap(text, est);
+  if (!audioOn) { view.setSpeaking(true); setTimeout(() => view.setSpeaking(false), est); return; }
+  queue.push(text);
+  if (queue.length > 4) queue = queue.slice(-4);
+  next();
+}
+
+// ---------- flight recorder ----------
+const traceBox = $("#tracebox");
+const TOOL_LABEL = {
+  get_status: "reading own vitals", read_stream_chat: "reading comms",
+  read_x: "scanning X", web_fetch: "pulling the internet", post_tweet: "drafting a post",
+  send_chat: "typing in chat", speak: "opening voice loop", remember: "writing to memory",
+  set_goals: "rewriting objectives", ask_human: "escalating to its human",
+  claim_creator_fees: "claiming creator fees", buy_token: "placing a buy",
+  sell_token: "placing a sell", quote_price: "pricing the book",
+  launch_coin: "launching the coin",
+};
+function pushTrace(kind, text) {
+  const el = document.createElement("div");
+  el.className = "tl fresh ev-" + kind;
+  el.innerHTML = `<span class="k">${esc(kind)}</span><span class="v">${esc(text)}</span>`;
+  traceBox.appendChild(el);
+  while (traceBox.children.length > 6) traceBox.removeChild(traceBox.firstChild);
+  setTimeout(() => el.classList.remove("fresh"), 600);
+}
+function traceFromEvent(e) {
+  const t = e.type;
+  if (t === "hello") return;
+  const clip = n => e.text.length > n ? e.text.slice(0, n) + "…" : e.text;
+  if (t === "tool") {
+    const name = String(e.text).split("(")[0];
+    pushTrace("tool", TOOL_LABEL[name] || name.replace(/_/g, " "));
+    return;
+  }
+  if (t === "think") pushTrace("wake", e.text.replace(/^tick #?/i, "tick "));
+  else pushTrace(t, clip(150));
+}
+
+// ---------- live event stream ----------
+function handleEvent(e) {
+  if (e.type === "chat") chatFromEvent(e.text);
+  else if (e.type === "speak" || e.type === "deploy") speak(e.text);
+  traceFromEvent(e);
+  const p = PHASE[e.type];
+  if (p !== undefined) setPhase(p);
+}
+async function hydrate() {
+  const s = await j("/api/state");
+  if (!s) return;
+  if (s.startedAt) bootTs = s.startedAt;
+  $("#b-sol").textContent = (s.sol ?? 0).toFixed(3);
+  $("#r-tick").textContent = s.tick;
+  $("#r-spent").textContent = (s.solSpentToday ?? 0).toFixed(3) + " ◎";
+  $("#r-coin").textContent = s.coin ? ("$" + s.coin.symbol) : "pre-launch";
+  const goals = (s.goals || []).slice(0, 4);
+  $("#objcount").textContent = (s.goals || []).length;
+  $("#objs").innerHTML = goals.length
+    ? goals.map((g, i) => `<div class="ob"><span class="n">${String(i + 1).padStart(2, "0")}</span><span>${esc(g.length > 92 ? g.slice(0, 92) + "…" : g)}</span></div>`).join("")
+    : `<div class="ob dim">no objectives set yet</div>`;
+  if (s.coin?.mint) {
+    $("#joinlink").href = `https://pump.fun/coin/${s.coin.mint}`;
+    $("#joinurl").textContent = `pump.fun/coin/${s.coin.mint.slice(0, 6)}…${s.coin.mint.slice(-4)}`;
+  }
+  return s;
+}
+async function health() {
+  const h = await j("/api/health");
+  if (h) $("#r-brain").textContent = h.brain === "live" ? (h.brainModel || "live") : "demo";
+}
+(async () => {
+  const s = await hydrate();
+  health();
+  const hist = await j("/api/chat?limit=25");
+  for (const m of (hist?.messages || [])) chatFromEvent(m.text);
+  for (const e of (s?.events || []).slice(-14)) traceFromEvent(e);
+  const es = new EventSource("/api/feed");
+  es.onmessage = ev => { try { handleEvent(JSON.parse(ev.data)); } catch {} };
+  es.onerror = () => {};
+})();
+setInterval(hydrate, 10000);
+setInterval(health, 30000);
+
+// pump.fun room chat (poller file), merged in when the rig runs
+async function pollPumpChat() {
+  const d = await j("/stream/hud/chat.json");
+  for (const m of (d?.messages || []).slice(-12)) addChat(m.user, m.body, !!m.me);
+}
+pollPumpChat(); setInterval(pollPumpChat, 3000);
+
+// COMMS is read-only here: viewers transmit in the coin's pump.fun chat, the
+// poller captures those messages and they're stored for context.
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "groktimus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "groktimus — grok brain, optimus body: autonomous humanoid streamer experiment",
+  "scripts": {
+    "build": "npm --prefix server install --omit=dev",
+    "start": "node server/index.js"
+  },
+  "engines": { "node": ">=20" }
+}

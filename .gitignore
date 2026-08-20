@@ -1,0 +1,16 @@
+node_modules/
+server/node_modules/
+server/data/
+server/.env
+server/.env.local
+stream/**/*.wav
+stream/**/*.mp3
+stream/pump-rtmp.env
+.DS_Store
+*.log
+.wallet-backup.json
+.vercel
+server/launch-test.png
+.mint-pump.json
+OPERATOR-URL.txt
+data/
