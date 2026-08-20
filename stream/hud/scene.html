@@ -4,152 +4,145 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=1280, initial-scale=1" />
 <title>groktimus — live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   /* ------------------------------------------------------------------
-     MISSION BROADCAST HUD — 1280x800, on camera.
-     Space-webcast layout: starfield + planet limb, mission clock at the top,
-     the unit floating centre-frame, COMMS on the left, TELEMETRY on the right,
-     and a full-width telemetry bar with two big readouts + a phase timeline.
-     Nothing here shares the old card layout.
+     SHOWROOM HUD — 1280x800, on camera.
+     Same clean white language as the landing: light gradient stage, the
+     unit standing centre-frame with a soft shadow, white cards with
+     hairline titles left (comms) and right (telemetry), a dark caption
+     bubble, and a thin bottom strip with SOL / phase timeline / mcap.
   ------------------------------------------------------------------ */
   :root{
-    --void:#04060b; --ink:#eaf2ff; --dim:#7f8ea6; --dim2:#4d5a70;
-    --hair:rgba(150,180,220,.16); --hair2:rgba(150,180,220,.30);
-    --cold:#8fd0ff; --hot:#ff6b4a; --go:#5ce6a0;
-    --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Roboto Mono",monospace;
-    --sans:"Inter","SF Pro Display",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    --paper:#ffffff; --mist:#f5f5f6; --mist2:#ededee; --hair:#e4e4e6;
+    --ink:#171a20; --gray:#5c5e62; --gray2:#9b9ea3;
+    --red:#e82127; --green:#12805c; --blue:#2b6cb8; --violet:#7a3fd1; --amber:#b07d10;
+    --mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Archivo","Helvetica Neue",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    --r:14px;
+    --shadow:0 1px 2px rgba(23,26,32,.05),0 8px 28px rgba(23,26,32,.07);
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{width:1280px;height:800px;overflow:hidden;background:var(--void);color:var(--ink);
-    font-family:var(--sans);letter-spacing:.01em}
-
-  /* ---- backdrop: stars, planet limb, vignette ---- */
-  #stars{position:absolute;inset:0;z-index:0;display:block}
-  .limb{position:absolute;left:-22%;right:-22%;bottom:-560px;height:900px;z-index:1;border-radius:50%;
-    background:radial-gradient(60% 52% at 50% 40%, rgba(58,132,214,.55) 0%, rgba(22,58,110,.42) 42%, rgba(6,14,28,0) 72%);
-    box-shadow:0 -1px 0 rgba(180,225,255,.55), 0 -22px 90px rgba(80,170,255,.20)}
-  .vig{position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:radial-gradient(120% 80% at 50% 42%, transparent 40%, rgba(2,4,8,.72) 100%)}
+  body{width:1280px;height:800px;overflow:hidden;color:var(--ink);font-family:var(--sans);
+    background:radial-gradient(120% 100% at 50% 112%, #e6e7ea 0%, #f4f4f5 48%, #ffffff 82%)}
 
   /* ---- the unit ---- */
-  #stage{position:absolute;inset:0;z-index:3}
+  #stage{position:absolute;inset:0;z-index:2}
   #bot{width:1280px;height:800px;display:block}
-  /* reticle brackets that frame the payload */
-  .ret{position:absolute;z-index:4;width:26px;height:26px;border:1px solid var(--hair2)}
-  .r1{left:512px;top:168px;border-right:0;border-bottom:0}
-  .r2{right:512px;top:168px;border-left:0;border-bottom:0}
-  .r3{left:512px;bottom:236px;border-right:0;border-top:0}
-  .r4{right:512px;bottom:236px;border-left:0;border-top:0}
-  .payload{position:absolute;left:0;right:0;top:140px;z-index:4;text-align:center;
-    font-family:var(--mono);font-size:10px;letter-spacing:.42em;color:var(--dim2)}
 
   /* ---- top bar ---- */
-  .top{position:absolute;top:0;left:0;right:0;height:74px;z-index:6;
-    display:flex;align-items:center;padding:0 26px;border-bottom:1px solid var(--hair)}
-  .brand{display:flex;align-items:center;gap:11px;font-size:17px;font-weight:600;letter-spacing:.06em;
-    text-transform:uppercase}
-  .mk{width:20px;height:20px;position:relative}
-  .mk:before{content:"";position:absolute;inset:1px;border:1.5px solid var(--ink);transform:rotate(45deg)}
-  .mk:after{content:"";position:absolute;left:50%;top:12%;width:1.5px;height:76%;margin-left:-.75px;background:var(--ink)}
-  .mission{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--dim2);margin-left:14px;
-    border-left:1px solid var(--hair);padding-left:14px}
+  .top{position:absolute;top:0;left:0;right:0;height:64px;z-index:6;
+    display:flex;align-items:center;padding:0 26px;
+    background:rgba(255,255,255,.78);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair)}
+  .word{font-weight:800;font-size:16px;letter-spacing:.26em;text-transform:uppercase}
+  .word span{color:var(--gray2)}
+  .mission{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--gray2);margin-left:16px;
+    border-left:1px solid var(--hair);padding-left:16px}
   .clock{position:absolute;left:0;right:0;text-align:center;pointer-events:none}
-  .clock .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.4em;color:var(--dim2)}
-  .clock .t{font-family:var(--mono);font-size:29px;font-weight:500;letter-spacing:.06em;margin-top:1px;
+  .clock .lbl{font-family:var(--mono);font-size:9px;letter-spacing:.4em;color:var(--gray2)}
+  .clock .t{font-family:var(--mono);font-size:24px;font-weight:500;letter-spacing:.06em;margin-top:1px;
     font-variant-numeric:tabular-nums}
-  .rightbits{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .rightbits{margin-left:auto;display:flex;align-items:center;gap:14px}
   .live{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.24em;
-    color:var(--hot)}
-  .live .d{width:8px;height:8px;border-radius:50%;background:var(--hot);animation:pulse 1.4s infinite}
+    color:var(--red)}
+  .live .d{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
   @keyframes pulse{50%{opacity:.25}}
-  .audio{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;cursor:pointer;background:transparent;
-    color:var(--dim);border:1px solid var(--hair2);padding:7px 12px;text-transform:uppercase}
-  .audio.on{color:var(--void);background:var(--cold);border-color:var(--cold)}
+  .audio{font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;background:#fff;
+    color:var(--ink);border:1.5px solid var(--ink);padding:7px 16px;border-radius:999px}
+  .audio.on{color:#fff;background:var(--ink)}
 
   /* ---- side columns ---- */
-  .col{position:absolute;z-index:6;width:326px;top:104px}
+  .col{position:absolute;z-index:6;width:330px;top:88px}
   .col.left{left:26px}
   .col.right{right:26px}
-  .ttl{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;color:var(--dim2);
-    padding-bottom:8px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between}
-  .ttl span{color:var(--dim2)}
+  .card{background:var(--paper);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px}
+  .card + .card{margin-top:14px}
+  .ttl{font-family:var(--mono);font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--gray2);display:flex;justify-content:space-between;margin-bottom:10px}
 
   /* comms */
-  .msgs{margin-top:12px;height:238px;overflow:hidden;display:flex;flex-direction:column;gap:11px;
+  .msgs{height:216px;overflow:hidden;display:flex;flex-direction:column;gap:10px;
     justify-content:flex-end;
     -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 26px);
     mask-image:linear-gradient(180deg,transparent 0,#000 26px)}
-  .m{font-size:14px;line-height:1.35}
-  .m .u{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--cold);display:block;
-    margin-bottom:3px;text-transform:uppercase}
-  .m.me .u{color:var(--go)}
-  .m .b{color:#c5d4e8}
-  .cta{margin-top:16px;border:1px solid var(--hair);padding:12px 13px;display:flex;gap:11px;align-items:center;
-    text-decoration:none}
-  .cta .pill{flex:none;width:26px;height:26px;background:#1ec37f;display:flex;align-items:center;justify-content:center}
-  .cta .t1{font-size:12px;color:#dbe6f5;line-height:1.25}
-  .cta .t2{font-family:var(--mono);font-size:10px;color:#7fd8ab;margin-top:3px;overflow-wrap:anywhere;letter-spacing:.06em}
+  .m{font-size:13.5px;line-height:1.35}
+  .m .u{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--blue);display:block;
+    margin-bottom:2px;text-transform:uppercase}
+  .m.me .u{color:var(--green)}
+  .m .b{color:#3b3e44}
+  .cta{margin-top:12px;background:var(--mist);border-radius:10px;padding:11px 13px;display:flex;gap:11px;
+    align-items:center;text-decoration:none}
+  .cta .pill{flex:none;width:26px;height:26px;border-radius:8px;background:#1ec37f;
+    display:flex;align-items:center;justify-content:center}
+  .cta .t1{font-size:12px;color:var(--ink);line-height:1.25;font-weight:500}
+  .cta .t2{font-family:var(--mono);font-size:10px;color:var(--green);margin-top:3px;overflow-wrap:anywhere;
+    letter-spacing:.04em}
 
   /* telemetry column */
-  .chartwrap{margin-top:12px;height:206px;position:relative}
+  .chartwrap{height:198px;position:relative}
   .chartwrap canvas{width:100%;height:100%;display:block}
-  .rows{margin-top:14px;border-top:1px solid var(--hair)}
-  .row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;
-    border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:12px}
-  .row .k{color:var(--dim2);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase}
+  .rows{margin-top:6px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;
+    border-bottom:1px solid var(--mist2);font-family:var(--mono);font-size:12px}
+  .row:last-child{border-bottom:0}
+  .row .k{color:var(--gray2);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase}
   .row .v{color:var(--ink);font-variant-numeric:tabular-nums}
-  .row .v.go{color:var(--go)}
-  .row .v.cold{color:var(--cold)}
+  .row .v.go{color:var(--green)}
+  .row .v.cold{color:var(--blue)}
 
-  /* trace: what it's doing right now, thin and low-key under the comms */
-  .objs{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-  .ob{display:flex;gap:10px;font-size:12.5px;line-height:1.35;color:#b9c8dd}
-  .ob .n{flex:none;font-family:var(--mono);font-size:10px;color:var(--cold);letter-spacing:.14em;padding-top:2px}
-  .ob.dim{color:var(--dim2);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em}
-  .trace{margin-top:12px;height:150px;overflow:hidden;display:flex;flex-direction:column;gap:5px;
+  /* objectives */
+  .objs{display:flex;flex-direction:column;gap:7px}
+  .ob{display:flex;gap:10px;font-size:12.5px;line-height:1.35;color:#3b3e44}
+  .ob .n{flex:none;font-family:var(--mono);font-size:10px;color:var(--gray2);letter-spacing:.14em;padding-top:2px}
+  .ob.dim{color:var(--gray2);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em}
+
+  /* field notes (flight recorder) */
+  .trace{height:132px;overflow:hidden;display:flex;flex-direction:column;gap:5px;
     justify-content:flex-end;
     -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 22px);
     mask-image:linear-gradient(180deg,transparent 0,#000 22px)}
   .tl{display:flex;gap:9px;font-family:var(--mono);font-size:10.5px;line-height:1.4}
-  .tl .k{flex:none;width:52px;color:var(--dim2);letter-spacing:.1em}
-  .tl .v{color:#93a5bd;overflow-wrap:anywhere}
+  .tl .k{flex:none;width:52px;color:var(--gray2);letter-spacing:.1em}
+  .tl .v{color:var(--gray);overflow-wrap:anywhere}
   .tl.ev-speak .k,.tl.ev-speak .v{color:var(--ink)}
-  .tl.ev-tool .k{color:var(--go)} .tl.ev-error .k{color:var(--hot)}
-  .tl.ev-chat .k{color:var(--cold)} .tl.ev-ask .k{color:var(--cold)}
+  .tl.ev-tool .k{color:var(--green)} .tl.ev-error .k{color:var(--red)}
+  .tl.ev-chat .k{color:var(--amber)} .tl.ev-ask .k{color:var(--violet)}
   .tl.fresh{animation:fade .45s ease-out}
   @keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 
-  /* ---- lower third caption ---- */
-  .cap{position:absolute;left:26px;right:372px;bottom:150px;z-index:7;
-    border-left:2px solid var(--cold);background:linear-gradient(90deg,rgba(6,12,22,.96),rgba(6,12,22,.72));
-    padding:14px 20px;opacity:0;transform:translateY(8px);transition:.26s}
+  /* ---- caption bubble (same language as the landing) ---- */
+  .cap{position:absolute;left:382px;right:382px;bottom:132px;z-index:7;display:flex;justify-content:center;
+    opacity:0;transform:translateY(8px);transition:.26s;pointer-events:none}
   .cap.show{opacity:1;transform:none}
-  .cap .who{font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:var(--cold);display:block;margin-bottom:5px}
-  .cap .txt{font-size:21px;line-height:1.34;color:#f2f7ff}
+  .cap .in{background:var(--ink);color:#fff;border-radius:12px;padding:13px 18px;max-width:100%;
+    box-shadow:0 10px 32px rgba(23,26,32,.22)}
+  .cap .who{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:#9b9ea3;display:block;margin-bottom:4px}
+  .cap .txt{font-size:18px;line-height:1.35}
 
-  /* ---- bottom telemetry bar ---- */
-  .bar{position:absolute;left:0;right:0;bottom:0;height:132px;z-index:7;
-    border-top:1px solid var(--hair2);background:linear-gradient(180deg,rgba(4,8,16,.55),rgba(3,6,12,.94));
-    display:grid;grid-template-columns:300px 1fr 300px;align-items:center;padding:0 26px}
+  /* ---- bottom strip ---- */
+  .bar{position:absolute;left:0;right:0;bottom:0;height:104px;z-index:7;
+    border-top:1px solid var(--hair);background:rgba(255,255,255,.85);backdrop-filter:blur(10px);
+    display:grid;grid-template-columns:280px 1fr 280px;align-items:center;padding:0 26px}
   .big{text-align:center}
-  .big .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.34em;color:var(--dim2)}
-  .big .v{font-family:var(--mono);font-size:40px;font-weight:500;line-height:1.1;margin-top:4px;
+  .big .k{font-family:var(--mono);font-size:9px;letter-spacing:.34em;color:var(--gray2)}
+  .big .v{font-family:var(--mono);font-size:32px;font-weight:500;line-height:1.1;margin-top:3px;
     font-variant-numeric:tabular-nums}
-  .big .u{font-family:var(--mono);font-size:12px;color:var(--dim);margin-left:5px}
+  .big .u{font-family:var(--mono);font-size:12px;color:var(--gray);margin-left:5px}
 
-  /* phase timeline — the tick lifecycle, SpaceX stage-marker style */
+  /* phase timeline — minimal dots */
   .phases{position:relative;padding:0 26px}
-  .track{position:relative;height:1px;background:var(--hair2);margin:0 12px}
-  .fillbar{position:absolute;left:0;top:0;height:1px;background:var(--cold);transition:width .5s ease}
+  .track{position:relative;height:2px;background:var(--mist2);margin:0 12px;border-radius:2px}
+  .fillbar{position:absolute;left:0;top:0;height:2px;background:var(--ink);transition:width .5s ease;border-radius:2px}
   .nodes{display:flex;justify-content:space-between;margin-top:-5px}
   .node{text-align:center;flex:1}
-  .node .dot{width:9px;height:9px;border:1px solid var(--hair2);background:var(--void);margin:0 auto;
-    transform:rotate(45deg);transition:.3s}
-  .node .nm{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dim2);margin-top:9px}
-  .node.on .dot{background:var(--cold);border-color:var(--cold);box-shadow:0 0 12px rgba(143,208,255,.9)}
+  .node .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--hair);background:#fff;margin:0 auto;
+    transition:.3s}
+  .node .nm{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--gray2);margin-top:8px}
+  .node.on .dot{background:var(--ink);border-color:var(--ink)}
   .node.on .nm{color:var(--ink)}
-  .node.done .dot{background:var(--dim2);border-color:var(--dim2)}
+  .node.done .dot{background:var(--gray2);border-color:var(--gray2)}
 </style>
 <script type="importmap">
 {
@@ -162,64 +155,65 @@
 </head>
 <body>
 
-<canvas id="stars" width="1280" height="800"></canvas>
-<div class="limb"></div>
 <div id="stage"><canvas id="bot"></canvas></div>
-<div class="vig"></div>
-
-<span class="ret r1"></span><span class="ret r2"></span>
-<span class="ret r3"></span><span class="ret r4"></span>
-<div class="payload">PAYLOAD · GROKTIMUS UNIT 01</div>
 
 <div class="top">
-  <div class="brand"><span class="mk"></span> groktimus</div>
-  <div class="mission">MISSION 01 · AUTONOMOUS</div>
+  <div class="word">GROK<span>TIMUS</span></div>
+  <div class="mission">HUMANOID UNIT 01 · AUTONOMOUS</div>
   <div class="clock">
     <div class="lbl">MISSION ELAPSED</div>
     <div class="t" id="clock">T+ 00:00:00</div>
   </div>
   <div class="rightbits">
     <button class="audio" id="audioBtn">enable voice</button>
-    <div class="live"><span class="d"></span> LIVE</div>
+    <div class="live"><span class="d"></span> ON AIR</div>
   </div>
 </div>
 
 <div class="col left">
-  <div class="ttl"><b>COMMS · GROUND LOOP</b><span id="commscount">0</span></div>
-  <div class="msgs" id="chatlist"></div>
-  <a class="cta" id="joinlink" href="https://pump.fun" target="_blank" rel="noopener">
-    <span class="pill">
-      <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3.2" y="7.8" width="17.6" height="8.4" rx="4.2" fill="#0f1a14" transform="rotate(-45 12 12)"/>
-        <rect x="3.2" y="7.8" width="8.8" height="8.4" rx="4.2" fill="#eafff4" transform="rotate(-45 12 12)"/>
-      </svg>
-    </span>
-    <div>
-      <div class="t1">transmit to the unit — chat on pump.fun</div>
-      <div class="t2" id="joinurl">pump.fun · coin soon</div>
-    </div>
-  </a>
-  <div class="ttl" style="margin-top:18px"><b>FLIGHT RECORDER</b><span id="rectick">REC</span></div>
-  <div class="trace" id="tracebox"></div>
+  <div class="card">
+    <div class="ttl"><b>COMMS</b><span id="commscount">0</span></div>
+    <div class="msgs" id="chatlist"></div>
+    <a class="cta" id="joinlink" href="https://pump.fun" target="_blank" rel="noopener">
+      <span class="pill">
+        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.2" y="7.8" width="17.6" height="8.4" rx="4.2" fill="#0f1a14" transform="rotate(-45 12 12)"/>
+          <rect x="3.2" y="7.8" width="8.8" height="8.4" rx="4.2" fill="#eafff4" transform="rotate(-45 12 12)"/>
+        </svg>
+      </span>
+      <div>
+        <div class="t1">talk to the unit — chat on pump.fun</div>
+        <div class="t2" id="joinurl">pump.fun · coin soon</div>
+      </div>
+    </a>
+  </div>
+  <div class="card">
+    <div class="ttl"><b>FIELD NOTES</b><span id="rectick">REC</span></div>
+    <div class="trace" id="tracebox"></div>
+  </div>
 </div>
 
 <div class="col right">
-  <div class="ttl"><b>TELEMETRY · MARKET</b><span id="feedstate">SIM</span></div>
-  <div class="chartwrap"><canvas id="chart" width="652" height="412"></canvas></div>
-  <div class="rows">
-    <div class="row"><span class="k">tick</span><span class="v" id="r-tick">—</span></div>
-    <div class="row"><span class="k">brain</span><span class="v cold" id="r-brain">—</span></div>
-    <div class="row"><span class="k">coin</span><span class="v go" id="r-coin">pre-launch</span></div>
-    <div class="row"><span class="k">spent 24h</span><span class="v" id="r-spent">—</span></div>
+  <div class="card">
+    <div class="ttl"><b>TELEMETRY · MARKET</b><span id="feedstate">SIM</span></div>
+    <div class="chartwrap"><canvas id="chart" width="660" height="396"></canvas></div>
+    <div class="rows">
+      <div class="row"><span class="k">tick</span><span class="v" id="r-tick">—</span></div>
+      <div class="row"><span class="k">brain</span><span class="v cold" id="r-brain">—</span></div>
+      <div class="row"><span class="k">coin</span><span class="v go" id="r-coin">pre-launch</span></div>
+      <div class="row"><span class="k">spent 24h</span><span class="v" id="r-spent">—</span></div>
+    </div>
   </div>
-  <div class="ttl" style="margin-top:18px"><b>OBJECTIVES</b><span id="objcount">0</span></div>
-  <div class="objs" id="objs"><div class="ob dim">no objectives set yet</div></div>
+  <div class="card">
+    <div class="ttl"><b>OBJECTIVES</b><span id="objcount">0</span></div>
+    <div class="objs" id="objs"><div class="ob dim">no objectives set yet</div></div>
+  </div>
 </div>
 
-<div class="cap" id="cap"><span class="who">GROKTIMUS ▸ VOICE</span><span class="txt" id="captext"></span></div>
+<div class="cap" id="cap"><div class="in"><span class="who">GROKTIMUS · VOICE</span><span class="txt" id="captext"></span></div></div>
 
 <div class="bar">
-  <div class="big"><div class="k">PROPELLANT</div><div class="v"><span id="b-sol">0.000</span><span class="u">SOL</span></div></div>
+  <div class="big"><div class="k">WALLET</div><div class="v"><span id="b-sol">0.000</span><span class="u">SOL</span></div></div>
   <div class="phases">
     <div class="track"><div class="fillbar" id="fill" style="width:0%"></div></div>
     <div class="nodes" id="nodes">
@@ -231,7 +225,7 @@
       <div class="node" data-p="5"><div class="dot"></div><div class="nm">STANDBY</div></div>
     </div>
   </div>
-  <div class="big"><div class="k">MARKET CAP</div><div class="v" id="b-mcap" style="font-size:22px;color:#4d5a70">PRE-LAUNCH</div></div>
+  <div class="big"><div class="k">MARKET CAP</div><div class="v" id="b-mcap" style="font-size:20px;color:#9b9ea3">PRE-LAUNCH</div></div>
 </div>
 
 <script type="module">
@@ -242,48 +236,26 @@ const $ = s => document.querySelector(s);
 const esc = x => String(x || "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 async function j(u) { try { return await (await fetch(u, { cache: "no-store" })).json(); } catch { return null; } }
 
-// ---------- backdrop: drifting starfield ----------
-(() => {
-  const c = $("#stars"), x = c.getContext("2d");
-  const stars = Array.from({ length: 220 }, () => ({
-    x: Math.random() * 1280, y: Math.random() * 800,
-    r: Math.random() * 1.25 + 0.25, a: Math.random() * 0.6 + 0.25,
-    tw: Math.random() * 0.02 + 0.004, drift: Math.random() * 0.05 + 0.008,
-  }));
-  let t = 0;
-  (function draw() {
-    t += 0.016;
-    x.clearRect(0, 0, 1280, 800);
-    for (const s of stars) {
-      s.x -= s.drift;                                  // slow lateral drift
-      if (s.x < -2) s.x = 1282;
-      const a = s.a * (0.72 + Math.sin(t * s.tw * 60 + s.y) * 0.28);
-      x.globalAlpha = Math.max(0, Math.min(1, a));
-      x.fillStyle = "#dce9ff";
-      x.beginPath(); x.arc(s.x, s.y, s.r, 0, 7); x.fill();
-    }
-    x.globalAlpha = 1;
-    requestAnimationFrame(draw);
-  })();
-})();
-
 // ---------- the unit ----------
-const view = mountScene($("#bot"), { transparent: true, space: true });
-view.bot.group.position.y = 0.62;
-view.bot.group.scale.setScalar(0.72);
+// Light stage: the studio lights + shadow ground from mountScene just work
+// over the CSS gradient. Reframe with the camera (the model overwrites its
+// own group.position.y every frame, so offsets must live on the camera).
+const view = mountScene($("#bot"), { transparent: true });
+view.camera.position.set(0, 1.6, 16.8);
+view.camera.lookAt(0, 1.05, 0);
 
-// ---------- market chart (dark, feeds the big readouts) ----------
+// ---------- market chart (showroom, feeds the big readouts) ----------
 const fmtUsd = v => v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(2) + "M"
   : v >= 1e3 ? "$" + (v / 1e3).toFixed(1) + "K" : "$" + (+v).toFixed(2);
 mountCoinChart($("#chart"), {
-  theme: "dark",
+  theme: "showroom",
   getCoin: async () => {
     const s = await j("/api/state");
     return s?.coin ? { mint: s.coin.mint, symbol: s.coin.symbol } : null;
   },
   onPrice: (px) => {
     const el = $("#b-mcap");
-    if (px?.mcap) { el.textContent = fmtUsd(px.mcap); el.style.fontSize = "40px"; el.style.color = ""; }
+    if (px?.mcap) { el.textContent = fmtUsd(px.mcap); el.style.fontSize = "32px"; el.style.color = ""; }
     $("#feedstate").textContent = "LIVE";
   },
 });
@@ -433,7 +405,7 @@ function speak(text) {
   next();
 }
 
-// ---------- flight recorder ----------
+// ---------- field notes ----------
 const traceBox = $("#tracebox");
 const TOOL_LABEL = {
   get_status: "reading own vitals", read_stream_chat: "reading comms",
