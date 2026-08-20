@@ -86,14 +86,15 @@ async function sendV0(instructions, signers) {
 }
 
 export async function launchCoin({ name, symbol, description, imagePath, twitter, website, devBuySol = 0 }) {
-  // Owner override for a controlled launch (e.g. the $TEST run). When set, these
-  // win over whatever the agent chose, and socials are forced off.
+  // Owner override for a controlled launch. When set, these win over whatever
+  // the agent chose; socials come only from env (never agent-invented links).
   if (process.env.LAUNCH_SYMBOL) {
     name = process.env.LAUNCH_NAME || name;
     symbol = process.env.LAUNCH_SYMBOL;
     if (process.env.LAUNCH_DESCRIPTION) description = process.env.LAUNCH_DESCRIPTION;
     if (process.env.LAUNCH_IMAGE) imagePath = process.env.LAUNCH_IMAGE;
-    twitter = undefined; website = undefined;
+    twitter = process.env.LAUNCH_TWITTER || undefined;
+    website = process.env.LAUNCH_WEBSITE || undefined;
   }
   // case is preserved — pump.fun accepts lowercase tickers
   symbol = String(symbol || "").replace(/[^A-Za-z0-9]/g, "").slice(0, ONCHAIN_SYMBOL_MAX);
