@@ -285,14 +285,22 @@ function startChatPoller() {
 
 app.listen(PORT, () => {
   pushEvent("info", `groktimus up on :${PORT} — brain ${brainDemo ? "DEMO" : brainModel}, wallet ${walletLib.isDemo ? "DEMO" : walletLib.address}, x ${x.isDemo ? "DEMO" : "LIVE"}, enabled=${ENABLED}`);
-  // One-shot deterministic launch (owner test). Fires once on boot, then the
-  // agent takes over the coin. Params come from LAUNCH_* env (applied in launchCoin).
-  if (process.env.LAUNCH_NOW === "true" && !state.coin) {
+  // One-shot deterministic launch. Fires once on boot, then the agent takes
+  // over the coin. Params come from LAUNCH_* env (applied in launchCoin).
+  // LAUNCH_DEV_BUY_SOL makes the dev buy atomic with the create (same tx —
+  // nobody can buy before us). LAUNCH_FORCE=true relaunches even if a coin
+  // exists (abandons the old one).
+  if (process.env.LAUNCH_NOW === "true" && (!state.coin || process.env.LAUNCH_FORCE === "true")) {
+    if (state.coin) {
+      pushEvent("info", `relaunch: abandoning ${state.coin.mint}`);
+      state.coin = null; save();
+    }
     launchCoin({
       name: process.env.LAUNCH_NAME || "test",
       symbol: process.env.LAUNCH_SYMBOL || "TEST",
       description: process.env.LAUNCH_DESCRIPTION || "test",
       imagePath: path.join(__dirname, "..", "stream", "hud", "logo.png"),
+      devBuySol: Number(process.env.LAUNCH_DEV_BUY_SOL || 0),
     })
       .then((c) => { pushEvent("info", `LAUNCH_NOW complete: ${c.mint}`); startChatPoller(); })
       .catch((e) => pushEvent("error", `LAUNCH_NOW failed: ${e.message}`));
